@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Speak Notes - Speech Recognition</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f9f9f9;
+      }
+      #transcript {
+        border: 1px solid #ddd;
+        padding: 20px;
+        margin-top: 20px;
+        min-height: 200px;
+        background-color: white;
+        border-radius: 5px;
+        white-space: pre-wrap;
+      }
+      #preview {
+        color: #666;
+        font-style: italic;
+        margin-top: 15px;
+      }
+      .status {
+        margin-top: 10px;
+        color: #666;
+      }
+      .listening {
+        color: #4a86e8;
+        font-weight: bold;
+      }
+      .error {
+        color: #f44336;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="content">
+      <div id="transcript"></div>
+      <div id="preview"></div>
+      <div class="status" id="status"></div>
+    </div>
+
+    <script>
+      // SpeakNotes API for speech recognition
+      window.SpeakNotes = {
+        recognition: null,
+        transcript: {
+          preview: "",
+          note: "",
+          listening: false,
+          no_match: false,
+        },
+        audioContext: null,
+        language: "pt-BR",
+
+        // Callbacks
+        onTranscriptChangeCallback: null,
+        onSpeechErrMessageCallback: null,
+        onListeningChangeCallback: null,
+
+        // Initialize speech recognition
+        init: function () {
+          const SpeechRecognition =
+            window.SpeechRecognition || window.webkitSpeechRecognition;
+
+          if (!SpeechRecognition) {
+            this.handleError(
+              "Speech recognition not supported in this browser"
+            );
+            return;
+          }
+
+          this.recognition = new SpeechRecognition();
+          this.recognition.continuous = true;
+          this.recognition.interimResults = true;
+          this.recognition.lang = this.language;
+
+          // Set up event handlers
+          this.recognition.onresult = this.handleResult.bind(this);
+          this.recognition.onerror = this.handleError.bind(this);
+          this.recognition.onend = this.handleEnd.bind(this);
+          this.recognition.onnomatch = this.handleNoMatch.bind(this);
+          this.recognition.onaudiostart = this.handleAudioStart.bind(this);
+          this.recognition.onaudioend = this.handleAudioEnd.bind(this);
+
+          // Listen for messages from the parent window
+          window.addEventListener("message", this.handleMessage.bind(this));
+
+          // Notify the parent window that SpeakNotes is ready
+          window.parent.postMessage({ type: "speakNotesReady" }, "*");
+
+          console.log("SpeakNotes initialized");
+        },
+
+        // Handle speech recognition results
+        handleResult: function (event) {
+          this.transcript.no_match = false;
+          const results = event.results;
+          const resultIndex = event.resultIndex;
+          const currentResult = results[resultIndex];
+          const currentTranscript = currentResult[0].transcript;
+
+          // Update preview (interim result)
+          this.transcript.preview = currentTranscript;
+          document.getElementById("preview").textContent =
+            "Preview: " + currentTranscript;
+
+          // If final result, add to note
+          if (currentResult.isFinal) {
+            this.transcript.note += " " + currentTranscript;
+            document.getElementById("transcript").textContent =
+              this.transcript.note;
+            this.transcript.preview = "";
+            document.getElementById("preview").textContent = "";
+          }
+
+          // Notify the parent window
+          this.notifyTranscriptChange();
+        },
+
+        // Handle errors
+        handleError: function (event) {
+          let errorMessage = "";
+          if (typeof event === "string") {
+            errorMessage = event;
+          } else if (event.error) {
+            errorMessage = event.error;
+          } else {
+            errorMessage = "Unknown error";
+          }
+
+          console.error("Speech recognition error:", errorMessage);
+          document.getElementById("status").innerHTML =
+            '<span class="error">Error: ' + errorMessage + "</span>";
+
+          // Notify the parent window
+          if (this.onSpeechErrMessageCallback) {
+            this.onSpeechErrMessageCallback(errorMessage);
+          }
+
+          window.parent.postMessage(
+            {
+              type: "speechErrMessage",
+              message: errorMessage,
+            },
+            "*"
+          );
+        },
+
+        // Handle recognition end
+        handleEnd: function () {
+          // If we're still supposed to be listening, restart recognition
+          if (this.transcript.listening && !this.stopped) {
+            try {
+              this.recognition.start();
+            } catch (e) {
+              console.error("Error restarting recognition:", e);
+              this.handleError(e.message || "failed-to-restart");
+            }
+          }
+        },
+
+        // Handle no match
+        handleNoMatch: function () {
+          this.transcript.no_match = true;
+          document.getElementById("status").textContent =
+            "Not very loud, let's hear it again...";
+          this.notifyTranscriptChange();
+        },
+
+        // Handle audio start
+        handleAudioStart: function () {
+          this.setListening(true);
+        },
+
+        // Handle audio end
+        handleAudioEnd: function () {
+          this.setListening(false);
+        },
+
+        // Start listening
+        startListening: function () {
+          if (this.transcript.listening) {
+            return;
+          }
+
+          try {
+            this.stopped = false;
+            this.recognition.start();
+            this.setListening(true);
+            console.log("Started listening");
+          } catch (e) {
+            console.error("Error starting speech recognition:", e);
+            this.handleError(e.message || "failed-to-start");
+          }
+        },
+
+        // Stop listening
+        stopListening: function () {
+          if (!this.transcript.listening) {
+            return;
+          }
+
+          try {
+            this.stopped = true;
+            this.recognition.stop();
+            this.setListening(false);
+            console.log("Stopped listening");
+          } catch (e) {
+            console.error("Error stopping speech recognition:", e);
+          }
+        },
+
+        // Set language
+        setLanguage: function (lang) {
+          this.language = lang;
+          if (this.recognition) {
+            this.recognition.lang = lang;
+          }
+        },
+
+        // Set listening state
+        setListening: function (isListening) {
+          this.transcript.listening = isListening;
+          document.getElementById("status").innerHTML = isListening
+            ? '<span class="listening">Listening...</span>'
+            : "Not listening";
+
+          // Notify the parent window
+          if (this.onListeningChangeCallback) {
+            this.onListeningChangeCallback(isListening);
+          }
+
+          window.parent.postMessage(
+            {
+              type: "listeningChange",
+              isListening: isListening,
+            },
+            "*"
+          );
+        },
+
+        // Register callbacks
+        onTranscriptChange: function (callback) {
+          this.onTranscriptChangeCallback = callback;
+        },
+
+        onSpeechErrMessage: function (callback) {
+          this.onSpeechErrMessageCallback = callback;
+        },
+
+        onListeningChange: function (callback) {
+          this.onListeningChangeCallback = callback;
+        },
+
+        // Notify of transcript change
+        notifyTranscriptChange: function () {
+          if (this.onTranscriptChangeCallback) {
+            this.onTranscriptChangeCallback(JSON.stringify(this.transcript));
+          }
+
+          window.parent.postMessage(
+            {
+              type: "transcript",
+              data: this.transcript,
+            },
+            "*"
+          );
+        },
+
+        // Handle messages from the parent window
+        handleMessage: function (event) {
+          if (!event.data || !event.data.action) {
+            return;
+          }
+
+          console.log("Received message from parent:", event.data);
+
+          switch (event.data.action) {
+            case "startListening":
+              this.startListening();
+              break;
+            case "stopListening":
+              this.stopListening();
+              break;
+            case "setLanguage":
+              if (event.data.language) {
+                this.setLanguage(event.data.language);
+              }
+              break;
+          }
+        },
+      };
+
+      // Initialize on page load
+      window.addEventListener("DOMContentLoaded", function () {
+        window.SpeakNotes.init();
+
+        // Notify the parent window that the page is loaded
+        window.parent.postMessage({ type: "pageLoaded" }, "*");
+      });
+    </script>
+  </body>
+</html>

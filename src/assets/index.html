@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Speak Notes</title>
+    <style>
+      :root {
+        --primary-color: #4a86e8;
+        --secondary-color: #f44336;
+        --text-color: #333333;
+        --light-text: #666666;
+        --background-color: #ffffff;
+        --light-background: #f8f9fa;
+        --border-color: #e0e0e0;
+        --success-color: #28a745;
+        --warning-color: #ffc107;
+        --error-color: #dc3545;
+      }
+
+      body {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: var(--light-background);
+        color: var(--text-color);
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        background-color: var(--background-color);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      h1 {
+        color: var(--primary-color);
+        font-weight: 500;
+        margin: 0 0 10px 0;
+        font-size: 28px;
+      }
+
+      h2 {
+        color: var(--text-color);
+        font-weight: 500;
+        font-size: 20px;
+        margin: 0 0 15px 0;
+      }
+
+      .language-selector {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 15px;
+      }
+
+      select {
+        padding: 8px 12px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        background-color: var(--background-color);
+        font-size: 14px;
+        color: var(--text-color);
+        width: 200px;
+      }
+
+      button {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        margin: 5px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        font-weight: 500;
+      }
+
+      button:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+
+      button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      button.secondary {
+        background-color: var(--secondary-color);
+      }
+
+      button.outline {
+        background-color: transparent;
+        border: 1px solid var(--primary-color);
+        color: var(--primary-color);
+      }
+
+      textarea {
+        width: 100%;
+        height: 200px;
+        padding: 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-size: 16px;
+        margin-top: 10px;
+        resize: vertical;
+        font-family: inherit;
+        box-sizing: border-box;
+      }
+
+      .preview {
+        margin-top: 15px;
+        padding: 15px;
+        background-color: var(--light-background);
+        border-radius: 4px;
+        min-height: 40px;
+        border: 1px solid var(--border-color);
+      }
+
+      .preview-label {
+        font-weight: 500;
+        margin-bottom: 5px;
+        color: var(--primary-color);
+        display: block;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 20px;
+        gap: 10px;
+      }
+
+      .status {
+        text-align: center;
+        margin-top: 15px;
+        font-style: italic;
+        color: var(--light-text);
+        padding: 5px;
+        border-radius: 4px;
+      }
+
+      .status.listening {
+        background-color: rgba(74, 134, 232, 0.1);
+        border-left: 3px solid var(--primary-color);
+        padding-left: 10px;
+      }
+
+      .error {
+        color: var(--error-color);
+        text-align: center;
+        margin-top: 10px;
+        padding: 10px;
+        background-color: rgba(220, 53, 69, 0.1);
+        border-radius: 4px;
+        display: none;
+      }
+
+      .notes-container {
+        margin-top: 30px;
+      }
+
+      .note {
+        margin-bottom: 30px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 20px;
+        background-color: var(--background-color);
+      }
+
+      .note-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .note-title {
+        font-weight: 500;
+        color: var(--primary-color);
+        margin: 0;
+      }
+
+      .note-controls {
+        display: flex;
+        gap: 10px;
+      }
+
+      .support-message {
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .support-message.success {
+        background-color: rgba(40, 167, 69, 0.1);
+        border: 1px solid rgba(40, 167, 69, 0.2);
+        color: var(--success-color);
+      }
+
+      .support-message.error {
+        background-color: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.2);
+        color: var(--error-color);
+      }
+
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        padding-top: 15px;
+        border-top: 1px solid var(--border-color);
+        color: var(--light-text);
+        font-size: 12px;
+      }
+
+      /* Medical style elements */
+      .medical-icon {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        background-color: var(--primary-color);
+        border-radius: 50%;
+        position: relative;
+        margin-right: 10px;
+        vertical-align: middle;
+      }
+
+      .medical-icon::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 12px;
+        height: 2px;
+        background-color: white;
+      }
+
+      .medical-icon::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 2px;
+        height: 12px;
+        background-color: white;
+      }
+
+      .note-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        font-size: 14px;
+        color: var(--light-text);
+      }
+
+      .note-date {
+        font-style: italic;
+      }
+
+      .note-id {
+        font-weight: 500;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        .container {
+          padding: 15px;
+          margin: 10px;
+        }
+
+        .actions {
+          flex-direction: column;
+        }
+
+        button {
+          width: 100%;
+          margin: 5px 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1><span class="medical-icon"></span>Speak Notes</h1>
+        <h2>Voice to Text Transcription</h2>
+      </header>
+
+      <div id="browser-support-message"></div>
+
+      <div class="language-selector">
+        <select id="language-select">
+          <option value="en-US">English (US)</option>
+          <option value="pt-BR">Português (Brasil)</option>
+          <option value="es-ES">Español</option>
+          <option value="fr-FR">Français</option>
+          <option value="de-DE">Deutsch</option>
+        </select>
+      </div>
+
+      <div id="notes-container" class="notes-container">
+        <div class="note" id="note-1">
+          <div class="note-header">
+            <h3 class="note-title">Note #1</h3>
+            <div class="note-controls">
+              <button id="start-btn" class="primary">Start listening</button>
+              <button id="stop-btn" class="secondary">Stop</button>
+            </div>
+          </div>
+
+          <div class="note-info">
+            <span class="note-id">ID: SN-001</span>
+            <span class="note-date" id="note-date"
+              >Date:
+              <script>
+                document.write(new Date().toLocaleDateString());
+              </script></span
+            >
+          </div>
+
+          <div class="preview">
+            <span class="preview-label">Live Preview:</span>
+            <div id="preview"></div>
+          </div>
+
+          <div id="transcript-container" style="display: none">
+            <textarea
+              id="transcript"
+              placeholder="Transcription will appear here..."
+            ></textarea>
+
+            <div class="actions">
+              <button id="undo-btn" class="outline" disabled>Undo</button>
+              <button id="redo-btn" class="outline" disabled>Redo</button>
+              <button id="share-btn">Share</button>
+              <button id="copy-btn">Copy</button>
+              <button id="download-btn">Download</button>
+            </div>
+
+            <div id="no-match-message" style="display: none">
+              <p>Not very loud, let's hear it again ...</p>
+            </div>
+          </div>
+
+          <div id="error-message" class="error"></div>
+
+          <div id="listening-status" class="status"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="add-note-btn" class="outline">Add new note</button>
+        <button id="delete-note-btn" class="outline">Delete last note</button>
+      </div>
+
+      <div class="footer">
+        <p>Speak Notes - Powered by Dioxus and Web Speech API</p>
+        <p>© 2025 - All rights reserved</p>
+      </div>
+    </div>
+
+    <script src="js/speech-recognition.js"></script>
+    <script>
+      // DOM Elements
+      const startBtn = document.getElementById("start-btn");
+      const stopBtn = document.getElementById("stop-btn");
+      const languageSelect = document.getElementById("language-select");
+      const previewEl = document.getElementById("preview");
+      const transcriptEl = document.getElementById("transcript");
+      const transcriptContainer = document.getElementById(
+        "transcript-container"
+      );
+      const errorMessageEl = document.getElementById("error-message");
+      const listeningStatusEl = document.getElementById("listening-status");
+      const noMatchMessageEl = document.getElementById("no-match-message");
+      const browserSupportMessageEl = document.getElementById(
+        "browser-support-message"
+      );
+      const copyBtn = document.getElementById("copy-btn");
+      const shareBtn = document.getElementById("share-btn");
+      const downloadBtn = document.getElementById("download-btn");
+      const addNoteBtn = document.getElementById("add-note-btn");
+      const deleteNoteBtn = document.getElementById("delete-note-btn");
+      const notesContainer = document.getElementById("notes-container");
+
+      // Check browser support
+      if (!SpeakNotes.isSupported()) {
+        browserSupportMessageEl.innerHTML = `
+          <div class="support-message error">
+            <h3>Browser Not Supported</h3>
+            <p>Your browser doesn't support the Speech Recognition API.</p>
+            <p>Please try using Chrome, Edge, or Safari.</p>
+          </div>
+        `;
+        startBtn.disabled = true;
+        stopBtn.disabled = true;
+      } else {
+        browserSupportMessageEl.innerHTML = `
+          <div class="support-message success">
+            <p>Your browser supports speech recognition!</p>
+          </div>
+        `;
+      }
+
+      // Set language
+      languageSelect.value = navigator.language || "en-US";
+
+      // Event listeners
+      languageSelect.addEventListener("change", (e) => {
+        // Update language for speech recognition
+        // This would require modifying the speech recognition code
+        console.log(`Language changed to: ${e.target.value}`);
+      });
+
+      startBtn.addEventListener("click", () => {
+        SpeakNotes.startListening();
+      });
+
+      stopBtn.addEventListener("click", () => {
+        SpeakNotes.stopListening();
+      });
+
+      copyBtn.addEventListener("click", async () => {
+        const success = await SpeakNotes.utils.copyToClipboard(
+          transcriptEl.value
+        );
+        if (success) {
+          const originalText = copyBtn.textContent;
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => {
+            copyBtn.textContent = originalText;
+          }, 2000);
+        }
+      });
+
+      shareBtn.addEventListener("click", async () => {
+        const success = await SpeakNotes.utils.shareTranscript(
+          transcriptEl.value
+        );
+        if (!success) {
+          errorMessageEl.textContent = "Couldn't share transcript";
+          errorMessageEl.style.display = "block";
+          setTimeout(() => {
+            errorMessageEl.textContent = "";
+            errorMessageEl.style.display = "none";
+          }, 2000);
+        }
+      });
+
+      downloadBtn.addEventListener("click", () => {
+        SpeakNotes.utils.downloadTranscript(transcriptEl.value);
+      });
+
+      transcriptEl.addEventListener("input", (e) => {
+        // Update the transcript in the JavaScript manager
+        SpeakNotes.setTranscript({ note: e.target.value });
+      });
+
+      // Note management
+      let noteCount = 1;
+
+      addNoteBtn.addEventListener("click", () => {
+        noteCount++;
+        const noteTemplate = document.getElementById("note-1").cloneNode(true);
+        noteTemplate.id = `note-${noteCount}`;
+
+        // Update note title and ID
+        noteTemplate.querySelector(
+          ".note-title"
+        ).textContent = `Note #${noteCount}`;
+        noteTemplate.querySelector(
+          ".note-id"
+        ).textContent = `ID: SN-00${noteCount}`;
+
+        // Update date
+        noteTemplate.querySelector(
+          ".note-date"
+        ).textContent = `Date: ${new Date().toLocaleDateString()}`;
+
+        // Clear content in the cloned note
+        noteTemplate.querySelector("#preview").textContent = "";
+        const textareaEl = noteTemplate.querySelector("textarea");
+        if (textareaEl) textareaEl.value = "";
+
+        // Add event listeners to the new note's buttons
+        const newStartBtn = noteTemplate.querySelector('[id^="start-btn"]');
+        const newStopBtn = noteTemplate.querySelector('[id^="stop-btn"]');
+
+        // Generate unique IDs for the new elements
+        const newPreviewId = `preview-${noteCount}`;
+        const newTranscriptId = `transcript-${noteCount}`;
+        const newErrorId = `error-${noteCount}`;
+        const newStatusId = `status-${noteCount}`;
+
+        // Update IDs
+        noteTemplate.querySelector("#preview").id = newPreviewId;
+        const transcriptEl = noteTemplate.querySelector("#transcript");
+        if (transcriptEl) transcriptEl.id = newTranscriptId;
+        noteTemplate.querySelector("#error-message").id = newErrorId;
+        noteTemplate.querySelector("#listening-status").id = newStatusId;
+
+        newStartBtn.addEventListener("click", () => {
+          SpeakNotes.startListening();
+        });
+
+        newStopBtn.addEventListener("click", () => {
+          SpeakNotes.stopListening();
+        });
+
+        notesContainer.appendChild(noteTemplate);
+      });
+
+      deleteNoteBtn.addEventListener("click", () => {
+        if (noteCount <= 1) return;
+        notesContainer.removeChild(notesContainer.lastChild);
+        noteCount--;
+      });
+
+      // Register callbacks from the speech recognition manager
+      SpeakNotes.onTranscriptChange((transcriptJson) => {
+        const transcript = JSON.parse(transcriptJson);
+
+        // Update preview
+        previewEl.textContent = transcript.preview;
+
+        // Update transcript
+        if (transcript.note.trim()) {
+          transcriptContainer.style.display = "block";
+          transcriptEl.value = transcript.note;
+        }
+
+        // Update no match message
+        noMatchMessageEl.style.display = transcript.noMatch ? "block" : "none";
+      });
+
+      SpeakNotes.onSpeechErrMessage((message) => {
+        if (message) {
+          errorMessageEl.textContent = `Error occurred in recognising speech: ${message}`;
+          errorMessageEl.style.display = "block";
+        } else {
+          errorMessageEl.textContent = "";
+          errorMessageEl.style.display = "none";
+        }
+      });
+
+      SpeakNotes.onListeningChange((isListening) => {
+        startBtn.textContent = isListening ? "Listening..." : "Start listening";
+        startBtn.disabled = isListening;
+        stopBtn.disabled = !isListening;
+
+        if (isListening) {
+          listeningStatusEl.textContent = `Listening to your voice in ${languageSelect.value}`;
+          listeningStatusEl.classList.add("listening");
+        } else {
+          listeningStatusEl.textContent = "";
+          listeningStatusEl.classList.remove("listening");
+        }
+      });
+
+      // Notify Rust that the page is loaded
+      window.addEventListener("load", () => {
+        if (window.external && window.external.invoke) {
+          window.external.invoke(JSON.stringify({ type: "pageLoaded" }));
+        }
+      });
+
+      // Notify Rust when SpeakNotes is ready
+      if (window.SpeakNotes) {
+        console.log("SpeakNotes is ready");
+        if (window.external && window.external.invoke) {
+          window.external.invoke(JSON.stringify({ type: "speakNotesReady" }));
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,7 +1,7 @@
 {
-  "name": "speak-notes-server",
+  "name": "med-transcribe-frontend",
   "version": "1.0.0",
-  "description": "Speech recognition server for Speak Notes",
+  "description": "Frontend para aplicação de transcrição médica",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

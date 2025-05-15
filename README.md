@@ -1,82 +1,110 @@
-# Speak Notes
+# Med Transcribe All
 
-Uma aplicação de reconhecimento de fala que usa Dioxus (Rust) para a interface e JavaScript para a captura e transcrição de áudio.
-
-## Visão Geral
-
-Este projeto implementa uma solução de reconhecimento de fala que separa a captura de áudio (feita em JavaScript) da interface do usuário (feita em Dioxus/Rust). A arquitetura consiste em:
-
-1. **Servidor Node.js**: Executa o código JavaScript de reconhecimento de fala em um navegador e expõe uma API REST e WebSocket para comunicação.
-2. **Aplicação Dioxus**: Fornece uma interface gráfica elegante e se comunica com o servidor para iniciar/parar o reconhecimento de fala e receber os resultados da transcrição.
-
-Esta abordagem resolve problemas de permissão de áudio que podem ocorrer em aplicações desktop com Dioxus, pois a captura de áudio é feita em um navegador, onde as APIs de áudio são bem suportadas.
+Uma aplicação para transcrição médica que captura áudio, transcreve e estrutura os dados médicos.
 
 ## Estrutura do Projeto
 
+O projeto está organizado em duas partes principais:
+
+### Frontend
+
+A interface do usuário que captura áudio, exibe transcrições e interage com o usuário.
+
+- Tecnologia: JavaScript/React
+- Localização: `/frontend`
+- Funciona independentemente ou em conjunto com o backend
+
+### Backend
+
+Servidor que recebe as transcrições, estrutura os dados médicos e fornece análises.
+
+- Tecnologia: Python com FastAPI
+- Localização: `/backend`
+- Opcional - o frontend funciona mesmo sem o backend
+
+## Modos de Execução
+
+### 1. Modo Completo (Frontend + Backend)
+
+Utiliza todas as funcionalidades, incluindo a análise médica estruturada.
+
 ```
-speak-notes/
-├── server.js                # Servidor Node.js com WebSocket e API REST
-├── package.json             # Dependências do servidor Node.js
-├── public/                  # Arquivos estáticos servidos pelo servidor
-│   └── index.html           # Página HTML com o código de reconhecimento de fala
-├── src/                     # Código Rust/Dioxus
-│   └── main.rs              # Aplicação Dioxus que se comunica com o servidor
-└── Cargo.toml               # Configuração do projeto Rust/Dioxus
+./start.sh
 ```
 
-## Pré-requisitos
+### 2. Modo Frontend (Sem Backend)
 
-- Node.js (v14 ou superior)
-- npm (v6 ou superior)
-- Rust (versão estável mais recente)
-- Cargo (gerenciador de pacotes Rust)
-- Um navegador moderno que suporte a Web Speech API (Chrome, Edge, Safari)
+Executa apenas o frontend para captura e exibição de transcrições, sem análise estruturada.
 
-## Instalação
+```
+./start.sh frontend
+```
 
-1. Instale as dependências do servidor Node.js:
+## Iniciando o Projeto Manualmente
 
-   ```
-   npm install
-   ```
+### Pré-requisitos
 
-2. Compile a aplicação Dioxus:
-   ```
-   cargo build --release
-   ```
+- Node.js e npm (para o frontend)
+- Python 3.8+ (para o backend)
 
-## Como Usar
+### Backend (Opcional)
 
-1. Inicie o servidor Node.js:
+1. Navegue até a pasta do backend:
 
-   ```
-   npm start
-   ```
+```
+cd backend
+```
 
-2. Execute a aplicação Dioxus:
-   ```
-   cargo run --release
-   ```
+2. Instale as dependências:
 
-## Como Funciona
+```
+pip install -r requirements.txt
+```
 
-1. O servidor Node.js serve uma página HTML que contém o código JavaScript para reconhecimento de fala usando a Web Speech API.
-2. A página HTML se conecta ao servidor via WebSocket para enviar os resultados da transcrição.
-3. A aplicação Dioxus se comunica com o servidor via HTTP para enviar comandos (iniciar/parar) e via WebSocket para receber os resultados da transcrição em tempo real.
-4. A interface Dioxus exibe os resultados da transcrição e permite controlar o processo de reconhecimento de fala.
+3. Inicie o servidor:
 
-## Vantagens desta Abordagem
+```
+python run.py
+```
 
-1. **Interface Gráfica Elegante**: Usa Dioxus para criar uma interface de usuário moderna e responsiva.
-2. **Contorna Problemas de Permissão**: Evita problemas de permissão de áudio que podem ocorrer em aplicações desktop.
-3. **Mantém o JavaScript para Reconhecimento**: Todo o código de captura e transcrição de áudio permanece em JavaScript, conforme solicitado.
-4. **Arquitetura Flexível**: Permite que você use o melhor de cada linguagem - JavaScript para APIs web e Rust para desempenho e segurança.
+### Frontend
 
-## Personalização
+1. Navegue até a pasta do frontend:
 
-Você pode personalizar esta solução de várias maneiras:
+```
+cd frontend
+```
 
-1. **Temas e Estilos**: Modifique o CSS na aplicação Dioxus para personalizar a aparência.
-2. **Funcionalidades Adicionais**: Adicione recursos como salvamento automático, exportação para diferentes formatos, etc.
-3. **Processamento de Linguagem Natural**: Integre com APIs de NLP para análise de sentimento, extração de entidades, etc.
-4. **Hospedagem Remota**: Hospede o servidor em um serviço de nuvem para permitir acesso de qualquer lugar.
+2. Instale as dependências:
+
+```
+npm install
+```
+
+3. Inicie o servidor de desenvolvimento:
+
+```
+node server.js
+```
+
+## Endereços de Acesso
+
+- Frontend: http://localhost:4000
+- Backend API: http://localhost:3000
+- WebSocket Backend: ws://localhost:3000/ws
+
+## Fluxo da Aplicação
+
+1. O usuário fala no microfone
+2. O frontend captura o áudio e o transcreve usando a API Web Speech
+3. As transcrições são exibidas na interface do usuário
+4. Se o backend estiver ativo, as transcrições são enviadas para processamento
+5. O backend analisa e estrutura os dados médicos (opcional)
+6. Os resultados da análise são exibidos ao usuário (se o backend estiver ativo)
+
+## Funcionalidades
+
+- Captura de áudio e transcrição em tempo real
+- Exibição imediata das transcrições no navegador
+- Estruturação de dados médicos a partir de transcrições (requer backend)
+- Análise preliminar dos dados médicos (requer backend)

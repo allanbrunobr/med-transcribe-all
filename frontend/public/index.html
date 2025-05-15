@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Speak Notes - Speech Recognition Service</title>
+    <title>Med Transcribe - Transcrição Médica</title>
     <style>
       body {
         font-family: "Helvetica Neue", Arial, sans-serif;
@@ -62,6 +62,18 @@
         border: 1px solid #e0e0e0;
         white-space: pre-wrap;
       }
+      .analysis {
+        margin-top: 15px;
+        padding: 15px;
+        background-color: rgba(74, 134, 232, 0.05);
+        border-radius: 4px;
+        min-height: 100px;
+        border: 1px solid #4a86e8;
+        white-space: pre-wrap;
+      }
+      .hidden {
+        display: none;
+      }
       .controls {
         display: flex;
         justify-content: center;
@@ -113,45 +125,74 @@
       .log-entry.error {
         color: #dc3545;
       }
+      .connection-info {
+        margin-top: 10px;
+        padding: 5px 10px;
+        background-color: rgba(108, 117, 125, 0.1);
+        border-radius: 4px;
+        font-size: 12px;
+        color: #666;
+      }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>Speak Notes - Speech Recognition Service</h1>
+      <h1>Med Transcribe - Transcrição Médica</h1>
 
       <div id="status" class="status inactive">
-        Service Status: Waiting for connection...
+        Status do Serviço: Aguardando conexão...
+      </div>
+      <div id="connection-info" class="connection-info">
+        Modo: Carregando...
       </div>
 
       <div class="controls">
-        <button id="start-btn">Start Listening</button>
-        <button id="stop-btn" class="stop" disabled>Stop Listening</button>
+        <button id="start-btn">Iniciar Escuta</button>
+        <button id="stop-btn" class="stop" disabled>Parar Escuta</button>
       </div>
 
       <div>
-        <h3>Live Preview:</h3>
+        <h3>Visualização em Tempo Real:</h3>
         <div id="preview" class="preview"></div>
       </div>
 
       <div>
-        <h3>Transcript:</h3>
+        <h3>Transcrição:</h3>
         <div id="transcript" class="transcript"></div>
       </div>
 
+      <div id="analysis-section" class="hidden">
+        <h3>Análise Médica:</h3>
+        <div id="analysis" class="analysis">
+          A análise médica aparecerá aqui quando houver uma transcrição
+          disponível.
+        </div>
+      </div>
+
       <div>
-        <h3>Connection Log:</h3>
+        <h3>Log de Conexão:</h3>
         <div id="log" class="log"></div>
       </div>
     </div>
 
     <script>
+      // Definindo a porta do frontend
+      const FRONTEND_PORT = 4000;
+
       // DOM Elements
       const statusEl = document.getElementById("status");
+      const connectionInfoEl = document.getElementById("connection-info");
       const startBtn = document.getElementById("start-btn");
       const stopBtn = document.getElementById("stop-btn");
       const previewEl = document.getElementById("preview");
       const transcriptEl = document.getElementById("transcript");
+      const analysisSectionEl = document.getElementById("analysis-section");
+      const analysisEl = document.getElementById("analysis");
       const logEl = document.getElementById("log");
+
+      // Estado de conexão e configuração
+      let backendConnected = false;
+      let appMode = "";
 
       // WebSocket connection
       let ws;
@@ -167,44 +208,123 @@
         noMatch: false,
       };
 
+      // Atualizar informações de conexão
+      function updateConnectionInfo() {
+        connectionInfoEl.textContent = `Modo: ${appMode} | Backend: ${
+          backendConnected ? "Conectado" : "Desconectado"
+        }`;
+
+        // Mostrar ou esconder a seção de análise médica
+        if (backendConnected) {
+          analysisSectionEl.classList.remove("hidden");
+          addLogEntry("Backend conectado - análise médica habilitada", "info");
+        } else {
+          // Não escondemos a seção se já existe conteúdo
+          if (
+            analysisEl.textContent.trim() ===
+            "A análise médica aparecerá aqui quando houver uma transcrição disponível."
+          ) {
+            analysisSectionEl.classList.add("hidden");
+          }
+        }
+      }
+
+      // Verificar o estado do servidor
+      function checkServerStatus() {
+        fetch(`http://${window.location.hostname}:${FRONTEND_PORT}/api/status`)
+          .then((response) => response.json())
+          .then((data) => {
+            const wasConnected = backendConnected;
+            backendConnected = data.backendConnected;
+            appMode = data.mode;
+
+            // Se houver mudança no estado da conexão, atualizar
+            if (wasConnected !== backendConnected) {
+              updateConnectionInfo();
+            }
+          })
+          .catch((error) => {
+            console.error("Erro ao verificar status do servidor:", error);
+            backendConnected = false;
+            updateConnectionInfo();
+          });
+      }
+
       // Initialize WebSocket connection
       function initWebSocket() {
-        ws = new WebSocket(
-          `ws://${window.location.hostname}:${window.location.port}`
-        );
+        ws = new WebSocket(`ws://${window.location.hostname}:${FRONTEND_PORT}`);
 
         ws.onopen = () => {
           isConnected = true;
-          updateStatus("Connected to server", "active");
-          addLogEntry("Connected to WebSocket server", "info");
+          updateStatus("Conectado ao servidor", "active");
+          addLogEntry("Conectado ao servidor WebSocket", "info");
+          checkServerStatus();
         };
 
         ws.onclose = () => {
           isConnected = false;
-          updateStatus("Disconnected from server", "inactive");
-          addLogEntry("Disconnected from WebSocket server", "info");
+          updateStatus("Desconectado do servidor", "inactive");
+          addLogEntry("Desconectado do servidor WebSocket", "info");
 
           // Try to reconnect after 3 seconds
           setTimeout(initWebSocket, 3000);
         };
 
         ws.onerror = (error) => {
-          updateStatus("Connection error", "error");
-          addLogEntry(`WebSocket error: ${error.message}`, "error");
+          updateStatus("Erro de conexão", "error");
+          addLogEntry(`Erro WebSocket: ${error}`, "error");
         };
 
         ws.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data);
-            addLogEntry(`Received: ${JSON.stringify(message)}`, "info");
+            addLogEntry(
+              `Recebido: ${JSON.stringify(message).substring(0, 100)}...`,
+              "info"
+            );
 
+            // Verificar se é uma mensagem de comando
             if (message.command === "start") {
               startListening();
             } else if (message.command === "stop") {
               stopListening();
             }
+
+            // Verificar se é uma resposta de transcrição simples
+            if (message.transcript && typeof message.transcript === "object") {
+              // Atualizar a visualização com os dados recebidos
+              if (message.transcript.preview) {
+                previewEl.textContent = message.transcript.preview;
+              }
+
+              if (message.transcript.note) {
+                transcriptEl.textContent = message.transcript.note;
+                addLogEntry(
+                  `Transcrição atualizada: ${message.transcript.note.substring(
+                    0,
+                    50
+                  )}...`,
+                  "transcript"
+                );
+              }
+            }
+
+            // Verificar se é uma resposta estruturada do backend Python
+            if (
+              message.transcript &&
+              message.structured_data &&
+              message.analysis
+            ) {
+              // Atualizar a análise médica
+              analysisEl.textContent = message.analysis;
+              analysisSectionEl.classList.remove("hidden");
+              addLogEntry("Análise médica atualizada", "info");
+            }
           } catch (error) {
-            addLogEntry(`Error parsing message: ${error.message}`, "error");
+            addLogEntry(
+              `Erro ao processar mensagem: ${error.message}`,
+              "error"
+            );
           }
         };
       }
@@ -216,7 +336,7 @@
           !("SpeechRecognition" in window)
         ) {
           updateStatus(
-            "Speech recognition not supported in this browser",
+            "Reconhecimento de fala não suportado neste navegador",
             "error"
           );
           startBtn.disabled = true;
@@ -228,10 +348,11 @@
           window.SpeechRecognition)();
         recognition.continuous = true;
         recognition.interimResults = true;
+        recognition.lang = "pt-BR"; // Definindo idioma para português do Brasil
 
         recognition.onstart = () => {
           isListening = true;
-          updateStatus("Listening...", "active");
+          updateStatus("Escutando...", "active");
           updateButtons();
           transcript.listening = true;
           sendTranscriptUpdate();
@@ -242,7 +363,7 @@
             // Restart if we're still supposed to be listening
             recognition.start();
           } else {
-            updateStatus("Connected to server", "active");
+            updateStatus("Conectado ao servidor", "active");
             transcript.listening = false;
             sendTranscriptUpdate();
           }
@@ -261,8 +382,13 @@
           if (currentResult.isFinal) {
             transcript.note += " " + currentTranscript;
             transcriptEl.textContent = transcript.note;
+
+            // Atualizar interface imediatamente antes de enviar
+            previewEl.textContent = "";
+
+            // Enviar atualização para o servidor
             sendTranscriptUpdate();
-            addLogEntry(`Transcribed: ${currentTranscript}`, "transcript");
+            addLogEntry(`Transcrito: ${currentTranscript}`, "transcript");
           }
         };
 
@@ -272,7 +398,10 @@
         };
 
         recognition.onerror = (event) => {
-          addLogEntry(`Speech recognition error: ${event.error}`, "error");
+          addLogEntry(
+            `Erro de reconhecimento de fala: ${event.error}`,
+            "error"
+          );
         };
 
         return true;
@@ -288,9 +417,12 @@
           recognition.start();
           isListening = true;
           updateButtons();
-          addLogEntry("Started listening", "command");
+          addLogEntry("Iniciou escuta", "command");
         } catch (error) {
-          addLogEntry(`Error starting recognition: ${error.message}`, "error");
+          addLogEntry(
+            `Erro ao iniciar reconhecimento: ${error.message}`,
+            "error"
+          );
         }
       }
 
@@ -299,29 +431,45 @@
         if (recognition) {
           isListening = false;
           recognition.stop();
-          updateStatus("Connected to server", "active");
+          updateStatus("Conectado ao servidor", "active");
           updateButtons();
-          addLogEntry("Stopped listening", "command");
+          addLogEntry("Parou escuta", "command");
         }
       }
 
       // Send transcript update to server
       function sendTranscriptUpdate() {
         if (isConnected) {
-          ws.send(JSON.stringify(transcript));
+          try {
+            ws.send(JSON.stringify(transcript));
+            addLogEntry(
+              `Enviando transcrição: ${transcript.note.substring(0, 30)}...`,
+              "info"
+            );
+          } catch (error) {
+            addLogEntry(
+              `Erro ao enviar transcrição: ${error.message}`,
+              "error"
+            );
+          }
+        } else {
+          addLogEntry(
+            "Não conectado ao servidor. Transcrição não enviada.",
+            "error"
+          );
         }
       }
 
       // Update status display
       function updateStatus(message, type) {
-        statusEl.textContent = `Service Status: ${message}`;
+        statusEl.textContent = `Status do Serviço: ${message}`;
         statusEl.className = `status ${type}`;
       }
 
       // Update button states
       function updateButtons() {
-        startBtn.disabled = isListening;
-        stopBtn.disabled = !isListening;
+        startBtn.disabled = isListening; // Desabilita o botão iniciar quando já está escutando
+        stopBtn.disabled = !isListening; // Desabilita o botão parar quando não está escutando
       }
 
       // Add entry to log
@@ -333,13 +481,17 @@
         logEl.scrollTop = logEl.scrollHeight;
       }
 
-      // Event listeners
-      startBtn.addEventListener("click", startListening);
-      stopBtn.addEventListener("click", stopListening);
+      // Event listeners - corrigindo a inversão das funções
+      startBtn.addEventListener("click", startListening); // Botão "Iniciar Escuta" inicia a escuta
+      stopBtn.addEventListener("click", stopListening); // Botão "Parar Escuta" para a escuta
+
+      // Verificar status a cada 5 segundos
+      setInterval(checkServerStatus, 5000);
 
       // Initialize
       initWebSocket();
       initSpeechRecognition();
+      checkServerStatus();
     </script>
   </body>
 </html>

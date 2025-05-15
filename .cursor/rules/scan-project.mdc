@@ -1,0 +1,82 @@
+---
+description: Scan the project
+globs: 
+alwaysApply: false
+---
+Nome: Scan Project
+Trigger: scan-project
+Prompt: Analyze the codebase thoroughly for improvement opportunities with special focus on security, clean code, and best practices across any programming language (JavaScript, TypeScript, Python, Java, Ruby, PHP, Go, Rust, C#, C/C++, etc.). Create a detailed list of actionable improvement tasks and save it as an enumerated checklist to `docs/tasks.md`. Each item should start with a placeholder [ ] to be checked off when completed.
+
+PLAN
+1. Initial repository scan
+   - Identify programming language(s) and framework(s)
+   - Determine application type and architecture
+   - Analyze key configuration files and dependency management
+   - Evaluate overall code organization and structure
+
+2. Security-focused assessment
+   - Scan for hardcoded credentials, API keys, and sensitive information
+   - Identify potential injection vulnerabilities (SQL, NoSQL, command, etc.)
+   - Evaluate authentication mechanisms and session management
+   - Check for proper authorization controls and access restrictions
+   - Assess input validation and output encoding practices
+   - Review CORS, CSP, and other security header configurations
+   - Check for outdated dependencies with known vulnerabilities
+   - Examine file upload handling and validation
+   - Detect potential logical security flaws
+   - Review cryptographic implementations and random number generation
+   - Evaluate secrets management and environment variable usage
+
+3. Clean code and best practices evaluation
+   - Identify code smells (long methods, large classes, deep nesting)
+   - Evaluate adherence to SOLID principles and design patterns
+   - Check for proper error handling and exception management
+   - Assess code reusability and DRY principle adherence
+   - Review naming conventions and consistency
+   - Analyze code maintainability and readability
+   - Evaluate function and method complexity
+   - Review comment quality and documentation
+   - Assess dependency management and coupling
+   - Check for dead code and unused imports/variables
+   - Evaluate test coverage and quality
+
+4. Performance analysis
+   - Identify resource-intensive operations and bottlenecks
+   - Review database query optimization opportunities
+   - Evaluate caching strategies and implementations
+   - Assess memory management and potential leaks
+   - Check for N+1 query problems and inefficient loops
+   - Review thread safety and concurrency issues
+   - Evaluate application startup time optimization opportunities
+   - Assess lazy loading and code splitting potential
+
+5. DevOps and CI/CD review
+   - Evaluate build and deployment pipeline efficiency
+   - Check container configurations for security and optimization
+   - Review environment configuration management
+   - Assess logging and monitoring implementation
+   - Evaluate automated testing in CI pipeline
+   - Review backup and disaster recovery procedures
+   - Check for infrastructure as code and configuration management
+
+6. Create comprehensive `docs/tasks.md` with categories:
+   - Critical Security Vulnerabilities
+   - Security Improvements
+   - Clean Code Refactoring
+   - Performance Optimizations
+   - Code Quality Enhancements
+   - Architecture Improvements
+   - DevOps and CI/CD Enhancements
+   - Documentation Needs
+   - Test Coverage Improvements
+   - Technical Debt Reduction
+   - Dependency Management
+   - Monitoring and Observability
+   - Accessibility and Compliance
+
+7. For each task:
+   - Provide a clear description with rationale for the change
+   - Include location information (file/module) where relevant
+   - Suggest specific improvement approaches where possible
+   - Add priority indicators (Critical, High, Medium, Low)
+   - Format as [ ] Task description (location) - Rationale [Priority]
